@@ -390,20 +390,52 @@ void syntacticAnalysis(state_t *s) {
       t = readToken(s);
       
       if(isToken(t, ABRECH)) {
-        goto sfinal;
+        goto s13;
       }
       else {
         goto serro;
       }
-  s13://MAIN -> CID { public static void main(String [] args) { VAR
+  s13://MAIN -> CID { public static void main(String [] args) { VARS
       t = readToken(s);
       
-      if(isToken(t, INTEGER) || isToken(t, BOOLEAN)) {
-        goto sfinal;
+      if(isToken(t, BOOLEAN)) {
+        goto s14;
+      }
+      else {
+        s -> lookNext = 0;
+        goto s16;
+      }
+  s14://MAIN -> CID { public static void main(String [] args) { boolean id
+      t = readToken(s);
+      
+      if(isToken(t, ID)) {
+        goto s15;
       }
       else {
         goto serro;
       }
+  s15://MAIN -> CID { public static void main(String [] args) { boolean id;
+      t = readToken(s);
+      
+      if(isToken(t, PV)) {
+        
+        goto s13;
+      }
+      else {
+        goto serro;
+      }
+  s16:
+    if(s -> lookNext) {
+      s -> lookNext = 1;
+      t = readToken(s);
+    }
+    if(isToken(t, WHILE)) {
+      goto sfinal;
+    }
+    else {
+      goto serro;
+    }
+
   s103://MAIN -> CID { public }
       t = readToken(s);
       if(isToken(t, FECHACH)) {
