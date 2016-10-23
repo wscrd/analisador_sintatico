@@ -203,7 +203,29 @@ void initilizeState(state_t *s, FILE *input, FILE *output);
 //le a linha do arquivo de token e retorna o token correspondente
 token_t *readToken(state_t *s);
 //verificar se o conjunto de token esta sintaticamente corretor
-void syntactic_analysis(state_t *s);
+void syntacticAnalysis(state_t *s);
+
+//imprime mensagem de erro
+void messageError(state_t *s, token_t *t);
+
+int isTokenName(token_t *t, char *name);
+
+int isTokenValue(token_t *t, char *value);
+
+int isToken(token_t *t, char *identification);
+
+token_t *isClassAndId(state_t *s) {
+  token_t *t = readToken(s);
+  if(isTokenName(t, CLASS)) {
+    t = readToken(s);
+    if(isTokenName(t, ID)) {
+      return t;
+    }
+  }
+  return NULL;
+}
+
+token_t *verifyTerminal(char *name, state_t *s);
 
 int main(int argc, char *argv[]) {
   char *inputName = "input.java";
@@ -219,29 +241,223 @@ int main(int argc, char *argv[]) {
     printf("Error: %s could not be created\n", outputName);
     exit(1);
   }
-
+  //convert input to token file
   state_t *s = calloc(1, sizeof(state_t));
   initilizeState(s, input, output);
   tokenizer(s);
   freeState(s);
 
+  //analysing token file
   s = calloc(1, sizeof(state_t));
   input = fopen(outputName, "r");
   initilizeState(s, input, NULL);
-  
-  token_t *t;
-  while((t = readToken(s)) != NULL) {
-    printf("<%s, %s>\n", t -> name, t -> value);
-  }
+  syntacticAnalysis(s);
+  // token_t *t;
+  // while((t = readToken(s)) != NULL) {
+  //   printf("<%s, %s>\n", t -> name, t -> value);
+  // }
+
   freeState(s);
   system("pause");
   return 0;
 }
 
-void syntactic_analysis(state_t *s) {
-  // PROG -> MAIN CLASSES
+int isTokenName(token_t *t, char *name) {
+  return t != NULL && name != NULL && areStringsEqual(t -> name, name);
+}
+
+int isTokenValue(token_t *t, char *value) {
+  return t != NULL && t -> value != NULL && value != NULL && areStringsEqual(t -> value, value); 
+}
+
+int isToken(token_t *t, char *identification) {
+  if(areStringsEqual(t -> name, PONTUACAO) ||
+     areStringsEqual(t -> name, OPERADOR)) {
+    return isTokenValue(t, identification);
+  }
+  else {
+    return isTokenName(t, identification);
+  }
+}
+
+void syntacticAnalysis(state_t *s) {
   token_t *t;
-  t = readToken(s);
+  s0: // MAIN -> CID
+      t = isClassAndId(s);
+      if(t) {
+        goto s1;  
+      }
+      else {
+        goto serro;
+      }
+  s1: //MAIN -> CID {
+      t = readToken(s);
+
+      if(isToken(t, ABRECH)) {
+        goto s2;
+      }
+      else {
+        goto serro;
+      }
+  s2://MAIN -> CID { public 
+      t = readToken(s);
+      if(isToken(t, PUBLIC)) {
+        goto s3;//goto s103
+      }
+      else {
+        goto serro;
+      }
+  s3://MAIN -> CID { public static
+      t = readToken(s);
+      if(isToken(t, STATIC)) {
+        goto s4;
+      }
+      else {
+        goto serro;
+      }
+  s4://MAIN -> CID { public static void
+      t = readToken(s);
+      if(isToken(t, VOID)) {
+        goto s5;
+      }
+      else {
+        goto serro;
+      }
+  s5://MAIN -> CID { public static void main
+      t = readToken(s);
+      if(isToken(t, MAIN)) {
+        goto s6;
+      }
+      else {
+        goto serro;
+      }
+  s6://MAIN -> CID { public static void main(
+      t = readToken(s);
+      if(isToken(t, ABREPAR)) {
+        goto s7;
+      }
+      else {
+        goto serro;
+      }
+  s7://MAIN -> CID { public static void main(String
+      t = readToken(s);
+
+      if(isToken(t, STRING)) {
+
+        goto s8;
+      }
+      else {
+        goto serro;
+      }
+  s8://MAIN -> CID { public static void main(String [
+      t = readToken(s);
+
+
+      if(isToken(t, ABRECOL)) {
+        goto s9;
+      }
+      else {
+        goto serro;
+      }
+  s9://MAIN -> CID { public static void main(String []
+      t = readToken(s);
+
+      if(isToken(t, FECHACOL)) {
+        goto s10;
+      }
+      else {
+        goto serro;
+      }
+  s10://MAIN -> CID { public static void main(String [] args
+      t = readToken(s);
+
+      if(isToken(t, ID)) {
+        goto s11;
+      }
+      else {
+        goto serro;
+      }
+  s11://MAIN -> CID { public static void main(String [] args)
+      t = readToken(s);
+      
+      if(isToken(t, FECHAPAR)) {
+        goto s12;
+      }
+      else {
+        goto serro;
+      }
+  s12://MAIN -> CID { public static void main(String [] args) {
+      t = readToken(s);
+      
+      if(isToken(t, ABRECH)) {
+        goto sfinal;
+      }
+      else {
+        goto serro;
+      }
+  s13://MAIN -> CID { public static void main(String [] args) { VAR
+      t = readToken(s);
+      
+      if(isToken(t, INTEGER) || isToken(t, BOOLEAN)) {
+        goto sfinal;
+      }
+      else {
+        goto serro;
+      }
+  s103://MAIN -> CID { public }
+      t = readToken(s);
+      if(isToken(t, FECHACH)) {
+        goto s104;
+      }
+      else {
+        goto serro;
+      }
+  s104://PROG -> ... CLASSES //CLASSES -> CLASS CLASSES | EMPTY
+      t = readToken(s);
+      if(t == NULL) { //EOF
+        goto sfinal;
+      }
+      else if(isToken(t, CLASS)){
+        t = readToken(s);
+        if(isToken(t, ID)) {
+          goto s105;
+        }
+        else {
+          goto serro;
+        }
+      }
+      else {
+        goto serro;
+      }
+  s105: //CLASS -> class id ...
+      t = readToken(s);
+      if(isToken(t, ABRECH)) {
+        t = readToken(s);
+        if(isToken(t, FECHACH)) {
+          goto s104;
+        }
+        else {
+          goto serro;
+        }
+      }
+      else {
+        goto serro;
+      }
+  serro:
+      messageError(s, t);
+  sfinal:
+    printf("Sintaticamente correto\n");
+}
+
+void messageError(state_t *s, token_t *t) {
+  if(t == NULL) {
+    printf("Erro na linha %d\n", s -> breakLines - 1);
+  }
+  else {
+    
+    printf("Erro no token %s da linha %d\n", t-> name, s -> breakLines - 1);
+  }
+  exit(1);
 }
 
 token_t *readToken(state_t *s) {
