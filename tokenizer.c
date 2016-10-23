@@ -43,6 +43,7 @@
 #include<stdlib.h>
 #include<string.h>
 
+#define TOKEN_MAX_LENGHT 255 //tamanho maximo de cada linha lida do arquivo de tokens
 #define ID_MAX_LENGHT 1024 // limite de tamanho para um id qualquer
 #define NUM_MAX_SIZE 20 // limite do tamanho de um numero inteiro
 #define ID_TABLE_MAX_SIZE 1024 //limite do numero de id possiveis em um programa
@@ -194,6 +195,16 @@ void saveNum(state_t *s);
 //limpa memorial do estado alocado
 void freeState(state_t *s);
 
+
+//separa token no formato nome(,valor) para nome e valor separados
+token_t *tokenFromString(char *word);
+//inicializa o estado do tokenizer
+void initilizeState(state_t *s, FILE *input, FILE *output);
+//le a linha do arquivo de token e retorna o token correspondente
+token_t *readToken(state_t *s);
+//verificar se o conjunto de token esta sintaticamente corretor
+void syntactic_analysis(state_t *s);
+
 int main(int argc, char *argv[]) {
   char *inputName = "input.java";
   char *outputName = "output.txt";
@@ -210,6 +221,41 @@ int main(int argc, char *argv[]) {
   }
 
   state_t *s = calloc(1, sizeof(state_t));
+  initilizeState(s, input, output);
+  tokenizer(s);
+  freeState(s);
+
+  s = calloc(1, sizeof(state_t));
+  input = fopen(outputName, "r");
+  initilizeState(s, input, NULL);
+  
+  token_t *t;
+  while((t = readToken(s)) != NULL) {
+    printf("<%s, %s>\n", t -> name, t -> value);
+  }
+  freeState(s);
+  system("pause");
+  return 0;
+}
+
+void syntactic_analysis(state_t *s) {
+  // PROG -> MAIN CLASSES
+  token_t *t;
+  t = readToken(s);
+}
+
+token_t *readToken(state_t *s) {
+  char *word = calloc(TOKEN_MAX_LENGHT, sizeof(char)); 
+  FILE *input = s -> input;
+  if(fscanf(input, "<%[^\n^>]>\n", word) != EOF) {
+    s -> breakLines += 1;
+    return tokenFromString(word);  
+  }
+  return NULL;
+}
+
+
+void initilizeState(state_t *s, FILE *input, FILE *output) {
   s -> breakLines = 1;
   s -> bufferBegin = 0;
   s -> bufferEnd = 0;
@@ -218,10 +264,18 @@ int main(int argc, char *argv[]) {
   s -> idTableSize = 0;
   s -> input = input;
   s -> output = output;
-  tokenizer(s);
-  freeState(s);
-  system("pause");
-  return 0;
+}
+
+token_t *tokenFromString(char *word) {
+  char *w = malloc(TOKEN_MAX_LENGHT*sizeof(char));
+  if(word != NULL) {
+    strcpy(w, word); //seguranca, pois strok destroy a string
+    char const delimiter[2] = ",";
+    char *name = strtok(w, delimiter);//strok nao eh thread safe(tem estado interno)
+    char *value = strtok(NULL, delimiter);
+    return createToken(name, value);  
+  }
+  return NULL;
 }
 
 void tokenizer(state_t *s) {
@@ -1987,10 +2041,6 @@ void addNewId(char *id, state_t *s) {
 
 int isNumeral(char c) {
   return ('0' <= c && c <= '9');
-}
-
-int isNotEqual(char c, char d) {
-  return c != d;
 }
 
 void freeState(state_t *s) {
