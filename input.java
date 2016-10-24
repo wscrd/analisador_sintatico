@@ -1,6 +1,6 @@
 class Factorial {
   public static void main(String [] args) { boolean booleano; boolean numero;
-    if
+    while(
 }
 class Myclass { 
 // class Fatorial {

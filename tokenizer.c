@@ -225,8 +225,6 @@ token_t *isClassAndId(state_t *s) {
   return NULL;
 }
 
-token_t *verifyTerminal(char *name, state_t *s);
-
 int main(int argc, char *argv[]) {
   char *inputName = "input.java";
   char *outputName = "output.txt";
@@ -390,52 +388,59 @@ void syntacticAnalysis(state_t *s) {
       t = readToken(s);
       
       if(isToken(t, ABRECH)) {
-        goto s13;
+        goto svar0;
       }
       else {
         goto serro;
       }
-  s13://MAIN -> CID { public static void main(String [] args) { VARS
+  svar0://MAIN -> CID { public static void main(String [] args) { VARS
       t = readToken(s);
       
       if(isToken(t, BOOLEAN)) {
-        goto s14;
+        goto svar1;
       }
       else {
         s -> lookNext = 0;
-        goto s16;
+        goto scmd0;
       }
-  s14://MAIN -> CID { public static void main(String [] args) { boolean id
+  svar1://MAIN -> CID { public static void main(String [] args) { boolean id
       t = readToken(s);
       
       if(isToken(t, ID)) {
-        goto s15;
+        goto svar2;
       }
       else {
         goto serro;
       }
-  s15://MAIN -> CID { public static void main(String [] args) { boolean id;
+  svar2://MAIN -> CID { public static void main(String [] args) { boolean id;
       t = readToken(s);
       
       if(isToken(t, PV)) {
         
-        goto s13;
+        goto svar0;
       }
       else {
         goto serro;
       }
-  s16:
+  scmd0://CMDS
     if(s -> lookNext) {
       s -> lookNext = 1;
       t = readToken(s);
     }
     if(isToken(t, WHILE)) {
+      goto scmd1;
+    }
+    else {
+      goto serro;
+    }
+  scmd1://CMDS -> while (
+    t = readToken(s);
+    if(isToken(t, ABREPAR)) {
       goto sfinal;
     }
     else {
       goto serro;
     }
-
   s103://MAIN -> CID { public }
       t = readToken(s);
       if(isToken(t, FECHACH)) {
@@ -478,7 +483,7 @@ void syntacticAnalysis(state_t *s) {
   serro:
       messageError(s, t);
   sfinal:
-    printf("Sintaticamente correto\n");
+    printf("Analisador Sintatico: Terminado com sucesso!\n");
 }
 
 void messageError(state_t *s, token_t *t) {
@@ -2014,7 +2019,7 @@ void tokenizer(state_t *s) {
         goto q83;
       }
   qfinal:
-      printf("Terminado com sucesso!\n");
+      printf("Analisador Lexico: Terminado com sucesso!\n");
       return;
   qerro:
       printf("ERRO LEXICO. falha na linha %d: %s \nUltimo caracter lido -> ", s -> breakLines, context);
