@@ -229,7 +229,7 @@ token_t *isExp(state_t *s);
 
 token_t *isPepxId(state_t *s);
 
-token_t *isPepx(token_t *tk, state_t *s);
+token_t *isPepx(state_t *s);
 
 token_t *isSexp(state_t *s);
 
@@ -270,79 +270,54 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
+
 token_t *isExp(state_t *s) {
-  return readToken(s);
+  return isPepx(s);
 }
 
-token_t *isPepx(token_t *tk, state_t *s) {
-  token_t *t = tk;
+token_t *isPepxpar(state_t *s) {
+  token_t *t = readToken(s);
 
-  if(isToken(t, ID) || isToken(t, THIS)) { // PEPX -> this | id
+  if(isToken(t, ABREPAR)) {
     t = readToken(s);
-    if(isToken(t, PNT)) {
-      t = readToken(s);
-      if(isToken(t, ID)) {
-        t = readToken(s);
-        if(isToken(t, ABREPAR)) {
-          t = readToken(s);
-          if(isToken(t, FECHAPAR)) {
-            return t;
-          }
-        } 
-        else {
-          s -> lookNext = 0;
-          return t;
-        }
-      }
+    if(isToken(t, FECHAPAR)) {
+      return t;
     }
-    return t;
   }
-  else if(isToken(t, ABREPAR)) { //PEPX -> (EXP)
-    if((t = isSexp(s))){
-      t = readToken(s);
-      if(isToken(t, FECHAPAR)) {
-        return t;
-      }
-    }
+  else {
+    s -> lookNext = 0;
+    return t;
   }
   messageError(s, t);
   return t;
 }
 
-token_t *isSexp(state_t *s) {
+token_t *isPepxl(state_t *s) {
   token_t *t = readToken(s);
-  if(isToken(t, NUM) || isToken(t, NULO) ||
-     isToken(t, VERDADEIRO), isToken(t, FALSO)) {
 
-    return t;
-  }
-  else if(isToken(t, COMPLEMENTAR) || isToken(t, SUB)) { //SEXP -> !SEXP | -SEXP
-    if((t = isSexp(s))) {
+  if(isToken(t, PNT)) {
+    t = readToken(s);
+
+    if(isToken(t, ID)) {
+      t = isPepxpar(s);
       return t;
     }
-  }
-  else if(isToken(t, NEW)) {// SEXP -> new int [exp]
-    t = readToken(s);
-    if(isToken(t, INTEGER)) {
-      t = readToken(s);
-      if(isToken(t, ABRECOL)) {
-        if(isExp(s)) {
-          t = readToken(s);
-          if(isToken(t, FECHACOL)) {
-            return t;
-          }    
-        }
-      }
-    }
-  }
-  else if((t = isPepx(t, s))) {
-    if(s -> lookNext) {
-      t = readToken(s);
-    }
-    else {
-      s -> lookNext = 1;
-    }
+    messageError(s, t);
     return t;
+  }
+  else {
+    s -> lookNext = 0;
+    return t;
+  }
+}
+
+token_t *isPepx(state_t *s) {
+  token_t *t = readToken(s);
+  if(isToken(t, ID) || isToken(t, THIS)) {
+
+    if((t = isPepxl(s))) {
+      return t;
+    }
   }
   messageError(s, t);
   return t;
@@ -512,8 +487,10 @@ void syntacticAnalysis(state_t *s) {
       }
   scmd0://CMDS
     if(s -> lookNext) {
-      s -> lookNext = 1;
       t = readToken(s);
+    }
+    else {
+      s -> lookNext = 1;
     }
     if(isToken(t, WHILE)) {
       goto scmd1;
@@ -529,8 +506,8 @@ void syntacticAnalysis(state_t *s) {
     else {
       goto serro;
     }
-  sexp0://EXP -> SEXP
-    t = isSexp(s);
+  sexp0://EXP -> ...
+    t = isExp(s);
     goto sfinal;
   s103://MAIN -> CID { public }
       t = readToken(s);
