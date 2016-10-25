@@ -225,6 +225,16 @@ token_t *isClassAndId(state_t *s) {
   return NULL;
 }
 
+token_t *isExp(state_t *s);
+
+token_t *isPepxId(state_t *s);
+
+token_t *isPepx(token_t *tk, state_t *s);
+
+token_t *isSexp(state_t *s);
+
+
+
 int main(int argc, char *argv[]) {
   char *inputName = "input.java";
   char *outputName = "output.txt";
@@ -258,6 +268,84 @@ int main(int argc, char *argv[]) {
   freeState(s);
   system("pause");
   return 0;
+}
+
+token_t *isExp(state_t *s) {
+  return readToken(s);
+}
+
+token_t *isPepx(token_t *tk, state_t *s) {
+  token_t *t = tk;
+
+  if(isToken(t, ID) || isToken(t, THIS)) { // PEPX -> this | id
+    t = readToken(s);
+    if(isToken(t, PNT)) {
+      t = readToken(s);
+      if(isToken(t, ID)) {
+        t = readToken(s);
+        if(isToken(t, ABREPAR)) {
+          t = readToken(s);
+          if(isToken(t, FECHAPAR)) {
+            return t;
+          }
+        } 
+        else {
+          s -> lookNext = 0;
+          return t;
+        }
+      }
+    }
+    return t;
+  }
+  else if(isToken(t, ABREPAR)) { //PEPX -> (EXP)
+    if((t = isSexp(s))){
+      t = readToken(s);
+      if(isToken(t, FECHAPAR)) {
+        return t;
+      }
+    }
+  }
+  messageError(s, t);
+  return t;
+}
+
+token_t *isSexp(state_t *s) {
+  token_t *t = readToken(s);
+  if(isToken(t, NUM) || isToken(t, NULO) ||
+     isToken(t, VERDADEIRO), isToken(t, FALSO)) {
+
+    return t;
+  }
+  else if(isToken(t, COMPLEMENTAR) || isToken(t, SUB)) { //SEXP -> !SEXP | -SEXP
+    if((t = isSexp(s))) {
+      return t;
+    }
+  }
+  else if(isToken(t, NEW)) {// SEXP -> new int [exp]
+    t = readToken(s);
+    if(isToken(t, INTEGER)) {
+      t = readToken(s);
+      if(isToken(t, ABRECOL)) {
+        if(isExp(s)) {
+          t = readToken(s);
+          if(isToken(t, FECHACOL)) {
+            return t;
+          }    
+        }
+      }
+    }
+  }
+  else if((t = isPepx(t, s))) {
+    if(s -> lookNext) {
+      t = readToken(s);
+    }
+    else {
+      s -> lookNext = 1;
+    }
+    return t;
+  }
+  messageError(s, t);
+  return t;
 }
 
 int isTokenName(token_t *t, char *name) {
@@ -436,11 +524,14 @@ void syntacticAnalysis(state_t *s) {
   scmd1://CMDS -> while (
     t = readToken(s);
     if(isToken(t, ABREPAR)) {
-      goto sfinal;
+      goto sexp0;
     }
     else {
       goto serro;
     }
+  sexp0://EXP -> SEXP
+    t = isSexp(s);
+    goto sfinal;
   s103://MAIN -> CID { public }
       t = readToken(s);
       if(isToken(t, FECHACH)) {
@@ -523,7 +614,7 @@ token_t *tokenFromString(char *word) {
   char *w = malloc(TOKEN_MAX_LENGHT*sizeof(char));
   if(word != NULL) {
     strcpy(w, word); //seguranca, pois strok destroy a string
-    char const delimiter[2] = ",";
+    char const delimiter[2] = ",";//separador
     char *name = strtok(w, delimiter);//strok nao eh thread safe(tem estado interno)
     char *value = strtok(NULL, delimiter);
     return createToken(name, value);  
